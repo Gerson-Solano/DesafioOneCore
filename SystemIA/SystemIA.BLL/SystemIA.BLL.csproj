@@ -6,4 +6,13 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SystemIA.DAL\SystemIA.DAL.csproj" />
+    <ProjectReference Include="..\SystemIA.Entity\SystemIA.Entity.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Implementation\Interfaces\" />
+  </ItemGroup>
+
 </Project>

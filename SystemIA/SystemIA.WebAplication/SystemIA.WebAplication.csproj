@@ -6,4 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SystemIA.BLL\SystemIA.BLL.csproj" />
+    <ProjectReference Include="..\SystemIA.Entity\SystemIA.Entity.csproj" />
+    <ProjectReference Include="..\SystemIA.IOC\SystemIA.IOC.csproj" />
+  </ItemGroup>
+
 </Project>
