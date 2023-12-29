@@ -16,9 +16,9 @@ namespace CapaDatos
         {
         }
 
-        public virtual DbSet<DocumentInfo> DocumentInfos { get; set; } = null!;
+        public virtual DbSet<DocumentInfo> DocumentInfo { get; set; } = null!;
         public virtual DbSet<Factura> Facturas { get; set; } = null!;
-        public virtual DbSet<ProductosFactura> ProductosFacturas { get; set; } = null!;
+        public virtual DbSet<ProductosFactura> ProductosFactura { get; set; } = null!;
         public virtual DbSet<Registro> Registros { get; set; } = null!;
         public virtual DbSet<Usuario> Usuarios { get; set; } = null!;
 

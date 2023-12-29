@@ -16,6 +16,7 @@ var conf = builder.Configuration.GetConnectionString("StringConexion");
 builder.Services.AddDbContext<DBIASYSTEMContext>(option => option.UseSqlServer(conf));
 
 builder.Services.AddScoped<IRegistro, lResgistro>();
+builder.Services.AddScoped<IDocumentInfo, lDocumentInfo>();
 
 var app = builder.Build();
 

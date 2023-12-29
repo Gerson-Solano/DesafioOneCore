@@ -30,27 +30,48 @@ namespace SistemaIA.Controllers
 
         // GET api/<RegistroController>/5
         [HttpGet("{id}")]
-        public string Get(int id)
+        public Registro Get(int id)
         {
-            return "value";
+            return _registro.GetRegistroById(id);
         }
 
         // POST api/<RegistroController>
         [HttpPost]
-        public void Post([FromBody] string value)
+        public string Post(Registro registro)
         {
+            return _registro.createRegistro(registro);
         }
 
         // PUT api/<RegistroController>/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        public void Put(int id)
         {
+
         }
 
         // DELETE api/<RegistroController>/5
         [HttpDelete("{id}")]
         public void Delete(int id)
         {
+        }
+
+
+        [HttpGet("ByFecha")]
+        public IEnumerable<Registro> GetByFecha(DateTime fecha)
+        {
+            return _registro.GetRegistrosByFecha(fecha);
+        }
+
+        [HttpGet("ByNombre")]
+        public IEnumerable<Registro> GetByNombre(string txt)
+        {
+            return _registro.GetRegistrosByNombre(txt);
+        }
+
+        [HttpGet("ByRangoFechas")]
+        public IEnumerable<Registro> GetByRangoFechas(DateTime fechaInicio, DateTime fechaFin)
+        {
+            return _registro.GetRegistrosPorRangoDeFechas(fechaInicio, fechaFin);
         }
     }
 }
