@@ -18,7 +18,6 @@ namespace CapaNegocio.Clases
         }
         public string createDocumntInfo(DocumentInfo document)
         {
-
             try
             {
                 if (document != null)
@@ -37,6 +36,16 @@ namespace CapaNegocio.Clases
 
                 return (ex.Message);
             }
+        }
+
+        public DocumentInfo getDocumentInfo(int id) 
+        {
+            return dbContext.DocumentInfo.Find(id);
+        }
+
+        public DocumentInfo getLastDocumentInfo()
+        {
+            return dbContext.DocumentInfo.OrderByDescending(d => d.IdDocument).FirstOrDefault();
         }
     }
 }

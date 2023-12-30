@@ -10,5 +10,7 @@ namespace CapaNegocio.Interfaces
     public interface IDocumentInfo
     {
         string createDocumntInfo(DocumentInfo documnt);
+        DocumentInfo getDocumentInfo(int id);
+        DocumentInfo getLastDocumentInfo();
     }
 }
