@@ -23,10 +23,13 @@ using iText.Kernel.Pdf;
 using System.Reflection.PortableExecutable;
 using iText.Kernel.Pdf.Canvas.Parser;
 using static iText.IO.Util.IntHashtable;
-
+using iText.Forms.Form.Element;
+//---------------------IMG
+using Tesseract;
+using System.Security.Cryptography.X509Certificates;
 namespace CapaNegocio.Clases
 {
-    public class lCTextAnalisis:ITextAnalisis
+    public class lCTextAnalisis : ITextAnalisis
     {
         //Asignacion de las variables de entorno llamadas "LANGUAGE_KEY" y "LANGUAGE_ENDPOINT"
         private static readonly string languageKey = Environment.GetEnvironmentVariable("LANGUAGE_KEY");
@@ -34,6 +37,8 @@ namespace CapaNegocio.Clases
 
         private static readonly AzureKeyCredential credentials = new AzureKeyCredential(languageKey);
         private static readonly Uri endpoint = new Uri(languageEndpoint);
+
+        private List<EntidadesTxt> listaEntidadestxt = new List<EntidadesTxt>();
 
         DBIASYSTEMContext dbcontext;
         public lCTextAnalisis(DBIASYSTEMContext dbcontext)
@@ -44,7 +49,7 @@ namespace CapaNegocio.Clases
         public string getSentiment(TextAnalyticsClient cliente, string texto)
         {
             var documentos = new List<string> { texto };
-            string sentimiento="El sentimiento no se encontro, vuelvalo a intentar!";
+            string sentimiento = "El sentimiento no se encontro, vuelvalo a intentar!";
             AnalyzeSentimentResultCollection resultados = cliente.AnalyzeSentimentBatch(documentos, options: new AnalyzeSentimentOptions()
             {
                 IncludeOpinionMining = true
@@ -64,7 +69,7 @@ namespace CapaNegocio.Clases
         {
             var documentos = new List<string> { texto };
             List<EntidadesTxt> listaEntidadesTxt = new List<EntidadesTxt>();
-           
+
             // Identificación de entidades
             RecognizeEntitiesResultCollection resultadosEntidades = cliente.RecognizeEntitiesBatch(documentos);
 
@@ -76,31 +81,32 @@ namespace CapaNegocio.Clases
                 {
                     EntidadesTxt entidades = new EntidadesTxt();
                     entidades.tipo = entidad.Category.ToString();
-                    entidades.texto =entidad.Text;
+                    entidades.texto = entidad.Text;
                     entidades.puntuacion = entidad.ConfidenceScore;
                     listaEntidadesTxt.Add(entidades);
                     //Console.WriteLine(entidades);
                     Console.WriteLine($"\tTipo: {entidad.Category}, Texto: {entidad.Text}, Puntuación: {entidad.ConfidenceScore}");
                 }
-               
+
             }
-            return(listaEntidadesTxt);
+            listaEntidadestxt = listaEntidadesTxt;
+            return (listaEntidadesTxt);
         }
         public bool EsFactura(List<EntidadesTxt> entidades)
         {
             // Buscar patrones o combinaciones específicas que sugieran una factura
             // Puedes ajustar esta lógica según las características de tus facturas
 
-            bool contienePalabraPrecioOAmount = entidades.Any(e => e.texto.ToLower().Contains("precio") || e.texto.ToLower().Contains("price") || e.texto.ToLower().Contains("amount") || e.texto.ToLower().Contains("cantidad") || e.texto.ToLower().Contains("quantity"));
+            //bool contienePalabraPrecioOAmount = entidades.Any(e => e.texto.ToLower().Contains("precio") || e.texto.ToLower().Contains("price") || e.texto.ToLower().Contains("amount") || e.texto.ToLower().Contains("cantidad") || e.texto.ToLower().Contains("quantity"));
             int cantidadQuantity = entidades.Count(e => e.tipo == "Quantity");
             int cantidadProducto = entidades.Count(e => e.tipo == "Product");
             // Establece un umbral para la cantidad de entidades de interés
-            bool cumpleUmbral = cantidadQuantity > 2 && cantidadProducto > 2;
+            bool cumpleUmbral = cantidadQuantity > 4 && cantidadProducto > 3;
 
             // Combinación de condiciones que podrían indicar una factura
-            bool esFactura = contienePalabraPrecioOAmount && cumpleUmbral;
+            //bool esFactura = cumpleUmbral;
 
-            return esFactura;
+            return cumpleUmbral;
         }
         public async Task<string> getResumen(TextAnalyticsClient client, string document)
         {
@@ -135,7 +141,7 @@ namespace CapaNegocio.Clases
 
                     foreach (AbstractiveSummary summary in documentResult.Summaries)
                     {
-                        resumentxt= summary.Text.Replace("\n", " ");
+                        resumentxt = summary.Text.Replace("\n", " ");
                         Console.WriteLine($"  Text: {summary.Text.Replace("\n", " ")}");
                         Console.WriteLine($"  Contexts:");
 
@@ -150,33 +156,33 @@ namespace CapaNegocio.Clases
                 }
             }
             resumentxt = traducirTexto(resumentxt).Result;
-            return (resumentxt); 
+            return (resumentxt);
         }
 
         public string getdescripccion(string texto)
         {
-           
-                // Expresión regular para encontrar palabras
-                Regex regex = new Regex(@"\b\w+\b");
 
-                // Obtener todas las coincidencias
-                MatchCollection matches = regex.Matches(texto);
+            // Expresión regular para encontrar palabras
+            Regex regex = new Regex(@"\b\w+\b");
 
-                // Tomar las primeras 10 palabras
-                int cantidadPalabras = Math.Min(matches.Count, 10);
-                string[] palabras = new string[cantidadPalabras];
+            // Obtener todas las coincidencias
+            MatchCollection matches = regex.Matches(texto);
 
-                for (int i = 0; i < cantidadPalabras; i++)
-                {
-                    palabras[i] = matches[i].Value;
-                }
+            // Tomar las primeras 10 palabras
+            int cantidadPalabras = Math.Min(matches.Count, 10);
+            string[] palabras = new string[cantidadPalabras];
 
-                // Unir las palabras en una cadena
-                string resultado = string.Join(" ", palabras);
+            for (int i = 0; i < cantidadPalabras; i++)
+            {
+                palabras[i] = matches[i].Value;
+            }
 
-                return resultado;
-        }  
-        
+            // Unir las palabras en una cadena
+            string resultado = string.Join(" ", palabras);
+
+            return resultado;
+        }
+
         public DocumentInfo getDocumentInfo(string texto)
         {
             var cliente = new TextAnalyticsClient(endpoint, credentials);
@@ -188,7 +194,7 @@ namespace CapaNegocio.Clases
             dbcontext.Add(documentInfo);
             dbcontext.SaveChanges();
 
-            return documentInfo;    
+            return documentInfo;
         }
 
         private static readonly string key = "9b1fd0dbf77141b1b0896ef6a4fc5e15";
@@ -238,25 +244,59 @@ namespace CapaNegocio.Clases
                 var extractedText = new StringBuilder();
                 // Leer el contenido del archivo PDF/Datos enviados
                 using (var stream = new MemoryStream())
-                {                                  
+                {
                     // Utilizar iTextSharp para extraer texto del PDF
                     var pdfReader = new PdfReader(new MemoryStream(archivo));
                     var pdfDocument = new PdfDocument(pdfReader);
                     var numberOfPages = pdfDocument.GetNumberOfPages();
-                    
+
 
                     for (int i = 1; i <= numberOfPages; i++)
                     {
                         extractedText.AppendLine(PdfTextExtractor.GetTextFromPage(pdfDocument.GetPage(i)));
-                    }                                  
+                    }
                 }
                 txt = extractedText.ToString();
             }
-            return(txt);    
+            return (txt);
+        }
+
+        public void scannerIMGToText(byte[] archivo)
+        {
+            //string pathImg = @"C:\Users\ISAAC\Desktop\MyProjets\EvaluacionOneCore\TestBlazor\ConsoleApp1\ConsoleApp1\invoiceexample.png";
+
+            string text = "";
+
+            try
+            {
+                using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+                {
+
+                    using (var img = Pix.LoadFromMemory(archivo))
+                    {
+                        using (var page = engine.Process(img))
+                        {
+                            text = page.GetText();
+                        }
+                    }
+
+                } 
+                Console.WriteLine("Texto de la imagen:  "+text);
+              
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine(ex.Message);
+            }
+
+            Console.WriteLine(text);
         }
 
         public int identificaryGestionarArchivo(ArchivoRequest archivoRequest)
         {
+            Registro registro = new Registro();
+
             //Si idArchivo es 1=pdf / si es 0 es una img
             int idArchivo = 2;
             var cliente = new TextAnalyticsClient(endpoint, credentials);
@@ -270,26 +310,128 @@ namespace CapaNegocio.Clases
                     {
                         getDocumentInfo(text);
                         idArchivo = 1;
+                        registro.Tipo = "application/pdf, resumen y análisis de pdf. Azure Cognitive Services";
+
                     }
                     else
                     {
+                        registro.Tipo = "application/pdf, Análisis y scaneo de Factura. Azure Cognitive Services";
+                        getFactura();
                         idArchivo = 0;
                     }
-                    
+                    registro.Descripccion = listaEntidadestxt[0].texto;
+                    registro.FechaRegistro = DateTime.Now;
+
                 }
                 else
                 {
+                    scannerIMGToText(archivoRequest.archivo);
+                    if (!EsFactura(getEntidades(cliente, text)))
+                    {
+                        getDocumentInfo(text);
+                        idArchivo = 1;
+                        registro.Tipo = "IMG, resumen y análisis de pdf. Azure Cognitive Services";
+
+                    }
+                    else
+                    {
+                        registro.Tipo = "IMG, Análisis y scaneo de Factura. Azure Cognitive Services";
+                        getFactura();
+                        idArchivo = 0;
+                       
+
+                    }
+                    registro.Descripccion = listaEntidadestxt[0].texto;
+                    registro.FechaRegistro = DateTime.Now;
                     //aqui va para procesar la img
                 }
+                if (registro!=null)
+                {
+                    dbcontext.Registros.Add(registro);
+                }
+                
             }
             catch (Exception ex)
             {
 
                 Console.WriteLine(ex.Message);
             }
-            
-            
+
+
             return idArchivo;
         }
+
+        public void getFactura()
+        {
+            Factura factura = new Factura();
+            //listaEntidadestxt
+            foreach (var item in listaEntidadestxt)
+            {
+
+            }
+
+            Console.WriteLine("Factura funtion: " + factura);
+            //return factura;
+        }
+
+        //public List<Factura> ProcesarEntidades(List<EntidadesTxt> entidades)
+        //{
+        //    // Filtrar entidades por tipo
+        //    var productos = entidades.Where(e => e.tipo == "Product").ToList();
+        //    var quantities = entidades.Where(e => e.tipo == "Quantity").ToList();
+        //    var fechas = entidades.Where(e => e.tipo == "DateTime").ToList();
+
+        //    // Crear instancia de Factura
+        //    var factura = new Factura();
+
+        //    // Extraer información de las entidades
+        //    foreach (var entidad in entidades)
+        //    {
+        //        switch (entidad.tipo)
+        //        {
+        //            case "Product":
+        //                AgregarProducto(factura, entidad);
+        //                break;
+        //            case "Quantity":
+        //                AgregarCantidad(factura, entidad);
+        //                break;
+        //            case "DateTime":
+        //                AgregarFecha(factura, entidad);
+        //                break;
+        //                // Agregar más casos según sea necesario
+        //        }
+        //    }
+
+        //    // Devolver la lista de facturas (puede haber más de una si hay varios productos)
+        //    return factura;
+        //}
+
+        //private void AgregarProducto(Factura factura, EntidadesTxt entidad)
+        //{
+        //    // Crear instancia de ProductosFactura y agregar a la lista de productos de la factura
+        //    var producto = new ProductosFactura
+        //    {
+        //        Nombre = entidad.texto,
+        //        // Puedes ajustar las propiedades según sea necesario
+        //    };
+
+        //    factura.Productos.Add(producto);
+        //}
+
+        //private void AgregarCantidad(Factura factura, EntidadesTxt entidad)
+        //{
+        //    // Actualizar la cantidad en el último producto agregado
+        //    var ultimoProducto = factura.Productos.LastOrDefault();
+        //    if (ultimoProducto != null)
+        //    {
+        //        ultimoProducto.Cantidad = int.Parse(entidad.texto);
+        //    }
+        //}
+
+        //private void AgregarFecha(Factura factura, EntidadesTxt entidad)
+        //{
+        //    // Convertir el texto de fecha a DateTime y asignar a la propiedad Fecha de la factura
+        //    factura.Fecha = DateTime.Parse(entidad.texto);
+        //}
     }
 }

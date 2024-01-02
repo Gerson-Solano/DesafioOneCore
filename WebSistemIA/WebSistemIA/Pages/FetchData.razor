@@ -1,5 +1,7 @@
 ﻿@page "/fetchdata"
 @using Microsoft.AspNetCore.Components.Forms
+@using ClosedXML.Excel
+@inject IJSRuntime serviceJS
 @inject HttpClient Http
 
 <PageTitle>Registros de los logs</PageTitle>
@@ -16,7 +18,7 @@
         <option value="RangoFecha">Rango de Fechas</option>
     </select>
     </div>
-    <div class="col-8 mb-3">
+    <div class="col-6 mb-3">
     @if (tipoBusqueda == "Tipo")
     {
             <input type="text" @bind="busqueda" @oninput="HandleInputChange" />
@@ -33,6 +35,9 @@
     }
     ||
     <button class="btn btn-primary me-2" @onclick="BuscarRegistros">Buscar</button>
+    </div>
+    <div class="col-2">
+        
     </div>
 </div>
 
@@ -63,6 +68,8 @@ else
             }
         </tbody>
     </table>
+
+   <button class="btn btn-success mt-3" @onclick="ExportarDocExcel">Descargar Excel</button>
 }
 
 @code {
@@ -73,6 +80,31 @@ else
     private DateTime fechaInicio = DateTime.Now;
     private DateTime fechaFin = DateTime.Now;
 
+    private async Task ExportarDocExcel()
+    {
+        using (var libro = new XLWorkbook())
+        {
+            IXLWorksheet hojaExcel = libro.Worksheets.Add("RegistroLogs");
+            hojaExcel.Cell(1, 1).Value = "ID";
+            hojaExcel.Cell(1, 2).Value = "Tipo";
+            hojaExcel.Cell(1, 3).Value = "Descripción";
+            hojaExcel.Cell(1, 4).Value = "Fecha de Registro";
+
+            for (int i = 1; i <= registros.Count(); i++)
+            {
+                hojaExcel.Cell(i+1, 1).Value = registros[i - 1].IdRegistro;
+                hojaExcel.Cell(i+1, 2).Value = registros[i - 1].Tipo;
+                hojaExcel.Cell(i+1, 3).Value = registros[i - 1].Descripccion;
+                hojaExcel.Cell(i+1, 4).Value = registros[i - 1].FechaRegistro.Value.ToShortDateString();
+            }
+            using(var memory = new MemoryStream())
+            {
+                libro.SaveAs(memory);
+                var nombreArchivo = string.Concat("Reporte de Log", DateTime.Now.ToString(), ".xlsx");
+                await serviceJS.InvokeAsync<object>("descargarExcel", nombreArchivo, Convert.ToBase64String(memory.ToArray()));
+            }
+        }
+    }
 
     private void HandleInputChange(ChangeEventArgs e)
     {       
@@ -153,4 +185,5 @@ else
         public string? Descripccion { get; set; }
         public DateTime? FechaRegistro { get; set; }
     }
+    
 }
