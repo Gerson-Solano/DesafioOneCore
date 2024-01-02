@@ -316,7 +316,10 @@ namespace CapaNegocio.Clases
                     else
                     {
                         registro.Tipo = "application/pdf, Análisis y scaneo de Factura. Azure Cognitive Services";
-                        getFactura();
+                        var temp = GenerarFactura(listaEntidadestxt);
+                        dbcontext.Facturas.Add(temp);
+                        dbcontext.SaveChanges();
+
                         idArchivo = 0;
                     }
                     registro.Descripccion = listaEntidadestxt[0].texto;
@@ -360,45 +363,48 @@ namespace CapaNegocio.Clases
             return idArchivo;
         }
 
-        public void getFactura()
+        public Factura GenerarFactura(List<EntidadesTxt> listaEntidadestxt)
         {
             Factura factura = new Factura();
-            //listaEntidadestxt
             int contador = 0;
+
             foreach (var item in listaEntidadestxt)
             {
-                var campo = item.tipo;
-                if(campo  == "Organization" && contador == 0)
+                switch (item.tipo)
                 {
-                    factura.NombreProveedor = item.texto;
-                    contador++;
+                    case "Organization":
+                        if (contador == 0) { factura.NombreProveedor = item.texto; contador++; }
+                        if (contador == 2) factura.NombreCliente = item.texto;
+                        break;
+
+                    case "Location":
+                        if (contador == 1) { factura.DireccionProveedor = item.texto; contador++; }
+                        break;
+
+                    case "DateTime":
+                        if (contador >= 0 && contador <= 4) { factura.Fecha = Convert.ToDateTime(item.texto); contador++; };
+                        break;
+
+                    case "Quantity":
+                        if (contador >= listaEntidadestxt.Count - 2 && item.texto.Contains("$"))
+                        {
+                            // Aquí debes extraer la cantidad y asignarla a la propiedad correspondiente de la factura
+                            // Ejemplo: factura.Total = Convert.ToDecimal(item.Texto.Substring(1));
+                            factura.Total = Convert.ToDecimal(item.texto.Substring(1));
+                            contador++;
+                        }
+                        break;
                 }
-                if (campo == "Location" && contador == 1)
+                if (factura.Total!=null)
                 {
-                    factura.DireccionProveedor = item.texto;
-                    contador++;
+                    break;
                 }
-                if (campo == "Organization" && contador == 2)
-                {
-                    factura.NombreCliente = item.texto;
-                    contador++;
-                }
-                if (campo == "DateTime" && (contador>=0 && contador <= 4))
-                {
-                    factura.Fecha = Convert.ToDateTime(item.texto);
-                    contador++;
-                }
-                if (campo == "Quantity" && contador >= listaEntidadestxt.Count-2 && item.texto.Contains("$"))
-                {
-                    factura.Fecha = Convert.ToDateTime(item.texto);
-                    contador++;
-                }
+                
             }
-            dbcontext.Facturas.Add(factura);
-            dbcontext.SaveChanges();
-            Console.WriteLine("Factura funtion: " + factura);
-            //return factura;
+
+            return factura;
         }
+
 
         //public List<Factura> ProcesarEntidades(List<EntidadesTxt> entidades)
         //{
