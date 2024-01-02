@@ -261,7 +261,7 @@ namespace CapaNegocio.Clases
             return (txt);
         }
 
-        public void scannerIMGToText(byte[] archivo)
+        public string scannerIMGToText(byte[] archivo)
         {
             //string pathImg = @"C:\Users\ISAAC\Desktop\MyProjets\EvaluacionOneCore\TestBlazor\ConsoleApp1\ConsoleApp1\invoiceexample.png";
 
@@ -269,7 +269,7 @@ namespace CapaNegocio.Clases
 
             try
             {
-                using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+                using (var engine = new TesseractEngine(@"C:\Users\ISAAC\Documents\GitHub\DesafioOneCore\SistemaIA\CapaNegocio\tessdata\", "eng", EngineMode.Default))
                 {
 
                     using (var img = Pix.LoadFromMemory(archivo))
@@ -280,8 +280,9 @@ namespace CapaNegocio.Clases
                         }
                     }
 
-                } 
-                Console.WriteLine("Texto de la imagen:  "+text);
+                }
+               
+               // Console.WriteLine("Texto de la imagen:  "+text);
               
             }
             catch (Exception ex)
@@ -289,8 +290,7 @@ namespace CapaNegocio.Clases
 
                 Console.WriteLine(ex.Message);
             }
-
-            Console.WriteLine(text);
+            return text;
         }
 
         public int identificaryGestionarArchivo(ArchivoRequest archivoRequest)
@@ -321,11 +321,12 @@ namespace CapaNegocio.Clases
                     }
                     registro.Descripccion = listaEntidadestxt[0].texto;
                     registro.FechaRegistro = DateTime.Now;
-
+                    dbcontext.Registros.Add(registro);
+                    dbcontext.SaveChanges();
                 }
                 else
-                {
-                    scannerIMGToText(archivoRequest.archivo);
+                {        
+                    text = scannerIMGToText(archivoRequest.archivo);
                     if (!EsFactura(getEntidades(cliente, text)))
                     {
                         getDocumentInfo(text);
@@ -343,11 +344,9 @@ namespace CapaNegocio.Clases
                     }
                     registro.Descripccion = listaEntidadestxt[0].texto;
                     registro.FechaRegistro = DateTime.Now;
-                    //aqui va para procesar la img
-                }
-                if (registro!=null)
-                {
                     dbcontext.Registros.Add(registro);
+                    dbcontext.SaveChanges();
+                    //aqui va para procesar la img
                 }
                 
             }
@@ -365,11 +364,38 @@ namespace CapaNegocio.Clases
         {
             Factura factura = new Factura();
             //listaEntidadestxt
+            int contador = 0;
             foreach (var item in listaEntidadestxt)
             {
-
+                var campo = item.tipo;
+                if(campo  == "Organization" && contador == 0)
+                {
+                    factura.NombreProveedor = item.texto;
+                    contador++;
+                }
+                if (campo == "Location" && contador == 1)
+                {
+                    factura.DireccionProveedor = item.texto;
+                    contador++;
+                }
+                if (campo == "Organization" && contador == 2)
+                {
+                    factura.NombreCliente = item.texto;
+                    contador++;
+                }
+                if (campo == "DateTime" && (contador>=0 && contador <= 4))
+                {
+                    factura.Fecha = Convert.ToDateTime(item.texto);
+                    contador++;
+                }
+                if (campo == "Quantity" && contador >= listaEntidadestxt.Count-2 && item.texto.Contains("$"))
+                {
+                    factura.Fecha = Convert.ToDateTime(item.texto);
+                    contador++;
+                }
             }
-
+            dbcontext.Facturas.Add(factura);
+            dbcontext.SaveChanges();
             Console.WriteLine("Factura funtion: " + factura);
             //return factura;
         }
