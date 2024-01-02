@@ -1,0 +1,41 @@
+﻿@page "/resumentxt"
+@inject HttpClient HttpClient
+<h3>Resumen del Documento</h3>
+
+@if (documentInfo != null)
+{
+    <div class="document-info">
+        <p><strong>Descripción:</strong> @documentInfo.Descripccion</p>
+        <p><strong>Resumen:</strong> @documentInfo.Resumen</p>
+        <p><strong>Sentimiento:</strong> @documentInfo.Sentimiento</p>
+    </div>
+}
+else
+{
+    <p>No se pudo cargar la información del documento.</p>
+}
+
+@code {
+    private DocumentInfo documentInfo;
+
+    // Método de ciclo de vida OnInitializedAsync para cargar datos al inicializar el componente
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Realizar la solicitud HTTP al endpoint para obtener datos del servidor
+            documentInfo = await HttpClient.GetFromJsonAsync<DocumentInfo>("https://localhost:7208/api/DocumentInfo");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al obtener datos del servidor: {ex.Message}");
+        }
+    }
+    public class DocumentInfo
+    {
+        public int IdDocument { get; set; }
+        public string? Descripccion { get; set; }
+        public string? Resumen { get; set; }
+        public string? Sentimiento { get; set; }
+    }
+}

@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 
 namespace CapaNegocio.Clases
 {
-    public class lDocumentInfo: IDocumentInfo
+    public class lCDocumentInfo: IDocumentInfo
     {
         private DBIASYSTEMContext dbContext;
-        public lDocumentInfo(DBIASYSTEMContext dbContext)
+        public lCDocumentInfo(DBIASYSTEMContext dbContext)
         {
             this.dbContext = dbContext;
         }

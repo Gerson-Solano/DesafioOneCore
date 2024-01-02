@@ -1,0 +1,75 @@
+﻿@page "/cargararchivo"
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+<h3>Subir Archivo</h3>
+
+<InputFile OnChange="HandleFileChange" />
+
+<button @onclick="SubirArchivo">Subir Archivo</button>
+
+<p>@resultado</p>
+
+@code {
+    private IBrowserFile archivo;
+    private string resultado;
+
+    private async Task HandleFileChange(InputFileChangeEventArgs e)
+    {
+        archivo = e.File;
+    }
+
+    private async Task SubirArchivo()
+    {
+        if (archivo != null)
+        {
+            var contenido = await ConvertirArchivoABytes(archivo);
+            string nombreArchivo = archivo.ContentType;
+            ArchivoRequest archivoRequest = new ArchivoRequest();
+            archivoRequest.archivo = contenido;
+            archivoRequest.tipo = nombreArchivo;
+            // Enviar el archivo al endpoint de la API
+            var response = await HttpClient.PostAsJsonAsync("https://localhost:7208/api/TextAnalisis/subirArchivo", archivoRequest);
+
+            if (response.IsSuccessStatusCode)
+            {
+                resultado = "Archivo subido exitosamente.";
+
+                var valorRespuesta = await response.Content.ReadFromJsonAsync<int>();
+
+                // Si el valor de la respuesta es 1, navegar a otra vista
+                if (valorRespuesta == 1)
+                {
+                    NavigationManager.NavigateTo("/resumentxt");
+                }
+                else if (valorRespuesta == 0)
+                {
+                    
+                }
+            }
+            else
+            {
+                resultado = $"Error al subir el archivo. Código de estado: {response.StatusCode}";
+            }
+        }
+        else
+        {
+            resultado = "Seleccione un archivo antes de intentar subirlo.";
+        }
+    }
+    public class ArchivoRequest
+    {
+        public string tipo { get; set; }
+        public byte[] archivo { get; set; }
+    }
+    private async Task<byte[]> ConvertirArchivoABytes(IBrowserFile file)
+    {
+        using (var stream = file.OpenReadStream())
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                await stream.CopyToAsync(memoryStream);
+                return memoryStream.ToArray();
+            }
+        }
+    }
+}

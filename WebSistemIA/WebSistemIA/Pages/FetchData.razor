@@ -1,0 +1,78 @@
+﻿@page "/fetchdata"
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+
+<PageTitle>Registros de los logs</PageTitle>
+
+<h1>Registros logs</h1>
+
+<p>Historial de logs</p>
+<div class="mb-3">
+    <label for="tipoBusqueda">Buscar por Tipo:</label>
+    <InputText id="tipoBusqueda" @bind="@tipoBusqueda" ></InputText>
+    <button class="btn btn-primary" @onclick="BuscarRegistros">Buscar</button>
+</div>
+@if (registros == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Tipo</th>
+                <th>Descripción</th>
+                <th>Fecha de Registro</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var registro in registros)
+            {
+                <tr>
+                    <td>@registro.IdRegistro</td>
+                    <td>@registro.Tipo</td>
+                    <td>@registro.Descripccion</td>
+                    <td>@(registro.FechaRegistro != null ? registro.FechaRegistro.Value.ToShortDateString() : "")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private Registro[]? registros;
+    private string tipoBusqueda = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarRegistros();
+    }
+
+    private async Task CargarRegistros()
+    {
+        registros = await Http.GetFromJsonAsync<Registro[]>("https://localhost:7208/api/Registro");
+    }
+
+    private async Task BuscarRegistros()
+    {
+        if (!string.IsNullOrEmpty(tipoBusqueda))
+        {
+            registros = await Http.GetFromJsonAsync<Registro[]>($"https://localhost:7208/api/Registro/ByTipo/{tipoBusqueda}");
+        }
+        else
+        {
+            // Si el campo de búsqueda está vacío, cargar todos los registros
+            await CargarRegistros();
+        }
+    }
+
+    public class Registro
+    {
+        public int IdRegistro { get; set; }
+        public string? Tipo { get; set; }
+        public string? Descripccion { get; set; }
+        public DateTime? FechaRegistro { get; set; }
+    }
+}

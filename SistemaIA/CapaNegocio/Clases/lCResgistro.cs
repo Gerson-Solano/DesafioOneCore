@@ -9,11 +9,11 @@ using System.Threading.Tasks;
 
 namespace CapaNegocio.Clases
 {
-    public class lResgistro: IRegistro
+    public class lCResgistro: IRegistro
     {
         private DBIASYSTEMContext dbContext;
 
-        public lResgistro(DBIASYSTEMContext dbContext)
+        public lCResgistro(DBIASYSTEMContext dbContext)
         {
             this.dbContext = dbContext; 
         }
