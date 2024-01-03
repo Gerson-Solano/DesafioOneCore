@@ -89,7 +89,10 @@ namespace CapaDatos
                     .IsUnicode(false)
                     .HasColumnName("nombreProveedor");
 
-                entity.Property(e => e.Total).HasColumnType("decimal(18, 0)");
+                entity.Property(e => e.Total)
+                    .HasMaxLength(100)
+                    .IsUnicode(false)
+                    .HasColumnName("Total");
             });
 
             modelBuilder.Entity<ProductosFactura>(entity =>

@@ -1,0 +1,84 @@
+﻿@page "/factura"
+<h3>Factura</h3>
+@inject HttpClient Http
+
+@if (factura != null)
+{
+    <div>
+        <p><strong>Número de Factura:</strong> @factura.NumFactura</p>
+        <p><strong>Nombre del Cliente:</strong> @factura.NombreCliente</p>
+        <p><strong>Dirección del Cliente:</strong> @factura.DireccionCliente</p>
+        <p><strong>Nombre del Proveedor:</strong> @factura.NombreProveedor</p>
+        <p><strong>Dirección del Proveedor:</strong> @factura.DireccionProveedor</p>
+        <p><strong>Fecha:</strong> @factura.Fecha.ToShortDateString()</p>
+        <p><strong>Total:</strong> @factura.Total</p>
+    </div>
+
+    <h4>Productos</h4>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID Producto</th>
+                <th>Número de Factura</th>
+                <th>Nombre</th>
+                <th>Precio Unitario</th>
+                <th>Cantidad</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var producto in productos)
+            {
+                <tr>
+                    <td>@producto.IdProducto</td>
+                    <td>@producto.NumFactura</td>
+                    <td>@producto.Nombre</td>
+                    <td>@producto.PrecioUnitario</td>
+                    <td>@producto.Cantidad</td>
+                    <td>@producto.Total</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p><em>Cargando...</em></p>
+}
+
+@code {
+
+    private FacturaModel factura;
+    private int id = 0;
+    private ProductoModel[] productos;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Obtener datos de factura
+        factura = await Http.GetFromJsonAsync<FacturaModel>("https://localhost:7208/api/Factura");
+        id = factura.NumFactura;
+        // Obtener datos de productos
+        productos = await Http.GetFromJsonAsync<ProductoModel[]>($"https://localhost:7208/api/Productos/{id}");
+    }
+
+    public class FacturaModel
+    {
+        public int NumFactura { get; set; }
+        public string NombreCliente { get; set; }
+        public string DireccionCliente { get; set; }
+        public string NombreProveedor { get; set; }
+        public string DireccionProveedor { get; set; }
+        public DateTime Fecha { get; set; }
+        public string Total { get; set; }
+    }
+
+    public class ProductoModel
+    {
+        public int IdProducto { get; set; }
+        public int NumFactura { get; set; }
+        public string Nombre { get; set; }
+        public decimal PrecioUnitario { get; set; }
+        public int Cantidad { get; set; }
+        public decimal Total { get; set; }
+    }
+}

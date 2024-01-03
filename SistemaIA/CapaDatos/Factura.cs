@@ -16,7 +16,7 @@ namespace CapaDatos
         public string? NombreProveedor { get; set; }
         public string? DireccionProveedor { get; set; }
         public DateTime? Fecha { get; set; }
-        public decimal? Total { get; set; }
+        public string? Total { get; set; }
 
         public virtual ICollection<ProductosFactura> ProductosFacturas { get; set; }
     }

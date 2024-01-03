@@ -25,9 +25,9 @@ namespace SistemaIA.Controllers
 
         // GET api/<ProductosController>/5
         [HttpGet("{id}")]
-        public IEnumerable<ProductosFactura> Get(int idFactura)
+        public IEnumerable<ProductosFactura> Get(int id)
         {
-            return _productos.getProductosByIdFactura(idFactura);
+            return _productos.getProductosByIdFactura(id);
         }
 
         // POST api/<ProductosController>

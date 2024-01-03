@@ -27,6 +27,9 @@ using iText.Forms.Form.Element;
 //---------------------IMG
 using Tesseract;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.EntityFrameworkCore;
+using iText.Commons.Actions.Contexts;
+
 namespace CapaNegocio.Clases
 {
     public class lCTextAnalisis : ITextAnalisis
@@ -281,9 +284,9 @@ namespace CapaNegocio.Clases
                     }
 
                 }
-               
-               // Console.WriteLine("Texto de la imagen:  "+text);
-              
+
+                // Console.WriteLine("Texto de la imagen:  "+text);
+
             }
             catch (Exception ex)
             {
@@ -316,10 +319,15 @@ namespace CapaNegocio.Clases
                     else
                     {
                         registro.Tipo = "application/pdf, Análisis y scaneo de Factura. Azure Cognitive Services";
-                        var temp = GenerarFactura(listaEntidadestxt);
-                        dbcontext.Facturas.Add(temp);
+                        var test = 
+                        var facturaTemp = generarFactura(listaEntidadestxt);
+                       
+                        dbcontext.Facturas.Add(facturaTemp);
                         dbcontext.SaveChanges();
-
+                        var numFactura = dbcontext.Facturas.OrderByDescending(d => d.NumFactura).FirstOrDefault();
+                        var producos = generarProductosFactura(listaEntidadestxt, numFactura.NumFactura);
+                        dbcontext.ProductosFactura.AddRange(producos);
+                        dbcontext.SaveChanges();
                         idArchivo = 0;
                     }
                     registro.Descripccion = listaEntidadestxt[0].texto;
@@ -328,7 +336,7 @@ namespace CapaNegocio.Clases
                     dbcontext.SaveChanges();
                 }
                 else
-                {        
+                {
                     text = scannerIMGToText(archivoRequest.archivo);
                     if (!EsFactura(getEntidades(cliente, text)))
                     {
@@ -340,10 +348,13 @@ namespace CapaNegocio.Clases
                     else
                     {
                         registro.Tipo = "IMG, Análisis y scaneo de Factura. Azure Cognitive Services";
-                        getFactura();
+                        var tmpFactura = generarFactura(listaEntidadestxt);
+                        dbcontext.Facturas.Add(tmpFactura);
+                        dbcontext.SaveChanges();
+                        var numFactura = dbcontext.Facturas.OrderByDescending(d => d.NumFactura).FirstOrDefault();
+                        var producos = generarProductosFactura(listaEntidadestxt, numFactura.NumFactura);
+                        
                         idArchivo = 0;
-                       
-
                     }
                     registro.Descripccion = listaEntidadestxt[0].texto;
                     registro.FechaRegistro = DateTime.Now;
@@ -351,7 +362,7 @@ namespace CapaNegocio.Clases
                     dbcontext.SaveChanges();
                     //aqui va para procesar la img
                 }
-                
+
             }
             catch (Exception ex)
             {
@@ -363,107 +374,100 @@ namespace CapaNegocio.Clases
             return idArchivo;
         }
 
-        public Factura GenerarFactura(List<EntidadesTxt> listaEntidadestxt)
+        public Factura generarFactura(List<EntidadesTxt> listaEntidadestxt)
         {
             Factura factura = new Factura();
             int contador = 0;
+            var cantidades = listaEntidadestxt.Where(e => e.tipo == "Quantity").ToList();                               
+            factura.Total = cantidades[cantidades.Count - 1].texto;
 
-            foreach (var item in listaEntidadestxt)
+            try
             {
-                switch (item.tipo)
+                foreach (var item in listaEntidadestxt)
                 {
-                    case "Organization":
-                        if (contador == 0) { factura.NombreProveedor = item.texto; contador++; }
-                        if (contador == 2) factura.NombreCliente = item.texto;
-                        break;
+                    switch (item.tipo)
+                    {
+                        case "Organization":
+                            if (contador == 0) { factura.NombreProveedor = item.texto; contador++; }
+                            if (contador >= 2 && (factura.NombreCliente == null && factura.NombreProveedor != null)) factura.NombreCliente = item.texto;
 
-                    case "Location":
-                        if (contador == 1) { factura.DireccionProveedor = item.texto; contador++; }
-                        break;
+                            break;
 
-                    case "DateTime":
-                        if (contador >= 0 && contador <= 4) { factura.Fecha = Convert.ToDateTime(item.texto); contador++; };
-                        break;
+                        case "Location":
+                            if (contador >= 1 && factura.DireccionProveedor == null) { factura.DireccionProveedor = item.texto; contador++; }
+                            if (contador >= 1 && (factura.DireccionCliente == null && factura.DireccionProveedor != null)) { factura.DireccionCliente = item.texto; contador++; }
 
-                    case "Quantity":
-                        if (contador >= listaEntidadestxt.Count - 2 && item.texto.Contains("$"))
-                        {
-                            // Aquí debes extraer la cantidad y asignarla a la propiedad correspondiente de la factura
-                            // Ejemplo: factura.Total = Convert.ToDecimal(item.Texto.Substring(1));
-                            factura.Total = Convert.ToDecimal(item.texto.Substring(1));
-                            contador++;
-                        }
-                        break;
+                            break;
+
+                        case "DateTime":
+                            if (contador >= 0 && factura.Fecha == null) { factura.Fecha = Convert.ToDateTime(item.texto); contador++; }
+                            break;
+                        
+                    }           
                 }
-                if (factura.Total!=null)
-                {
-                    break;
-                }
-                
             }
-
+            catch (Exception ex)
+            {
+               Console.WriteLine(ex.Message);
+            }
             return factura;
         }
 
+        public List<ProductosFactura> generarProductosFactura(List<EntidadesTxt> listaEntidadestxt, int idFactura)
+        {
+            ProductosFactura productosFactura = new ProductosFactura();
 
-        //public List<Factura> ProcesarEntidades(List<EntidadesTxt> entidades)
-        //{
-        //    // Filtrar entidades por tipo
-        //    var productos = entidades.Where(e => e.tipo == "Product").ToList();
-        //    var quantities = entidades.Where(e => e.tipo == "Quantity").ToList();
-        //    var fechas = entidades.Where(e => e.tipo == "DateTime").ToList();
+            List<ProductosFactura> listaProductos = new List<ProductosFactura>();
+            int contador = 0;         
+            try
+            {
+                foreach (var entidad in listaEntidadestxt)
+                {
+                   
+                    if (entidad.texto == "PRODUCTOS")
+                    {
+                        continue;
+                    }
+                    else if (productosFactura.Total != null)
+                    {
+                        productosFactura.NumFactura = idFactura;
+                       listaProductos.Add(productosFactura);
+                    }
 
-        //    // Crear instancia de Factura
-        //    var factura = new Factura();
+                    switch (entidad.tipo)
+                    {
+                        case "Product":
+                            if (productosFactura.Nombre == null || productosFactura.Total == null)
+                            {
+                                productosFactura.Nombre = entidad.texto;
+                            }
+                            break;
 
-        //    // Extraer información de las entidades
-        //    foreach (var entidad in entidades)
-        //    {
-        //        switch (entidad.tipo)
-        //        {
-        //            case "Product":
-        //                AgregarProducto(factura, entidad);
-        //                break;
-        //            case "Quantity":
-        //                AgregarCantidad(factura, entidad);
-        //                break;
-        //            case "DateTime":
-        //                AgregarFecha(factura, entidad);
-        //                break;
-        //                // Agregar más casos según sea necesario
-        //        }
-        //    }
+                        case "Quantity" when productosFactura.Nombre != null:
+                            if (productosFactura.PrecioUnitario == null)
+                            {
+                                    productosFactura.PrecioUnitario = Convert.ToDecimal(entidad.texto);
+                            }
+                            else if (productosFactura.Cantidad == null)
+                            {
+                                    productosFactura.Cantidad = Convert.ToInt32(entidad.texto);
+                            }
+                            else if (productosFactura.Total == null)
+                            {
+                                    productosFactura.Total = Convert.ToDecimal(entidad.texto);
+                            }
+                            break;
+                    }
+                }
+               
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            return listaProductos;
+        }
 
-        //    // Devolver la lista de facturas (puede haber más de una si hay varios productos)
-        //    return factura;
-        //}
 
-        //private void AgregarProducto(Factura factura, EntidadesTxt entidad)
-        //{
-        //    // Crear instancia de ProductosFactura y agregar a la lista de productos de la factura
-        //    var producto = new ProductosFactura
-        //    {
-        //        Nombre = entidad.texto,
-        //        // Puedes ajustar las propiedades según sea necesario
-        //    };
-
-        //    factura.Productos.Add(producto);
-        //}
-
-        //private void AgregarCantidad(Factura factura, EntidadesTxt entidad)
-        //{
-        //    // Actualizar la cantidad en el último producto agregado
-        //    var ultimoProducto = factura.Productos.LastOrDefault();
-        //    if (ultimoProducto != null)
-        //    {
-        //        ultimoProducto.Cantidad = int.Parse(entidad.texto);
-        //    }
-        //}
-
-        //private void AgregarFecha(Factura factura, EntidadesTxt entidad)
-        //{
-        //    // Convertir el texto de fecha a DateTime y asignar a la propiedad Fecha de la factura
-        //    factura.Fecha = DateTime.Parse(entidad.texto);
-        //}
     }
 }
